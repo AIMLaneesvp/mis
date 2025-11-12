@@ -35,7 +35,7 @@ def password_gate():
             if st.button("Logout"):
                 st.session_state.authenticated = False
                 st.session_state.username = None
-                st.experimental_rerun()
+                st.rerun()  # ✅ Fixed
         return True
 
     # --- Login UI ---
@@ -49,16 +49,9 @@ def password_gate():
         if username == APP_USERNAME and password == APP_PASSWORD:
             st.session_state.authenticated = True
             st.session_state.username = username
-            st.success("✅ Access Granted! Redirecting...")
-            st.session_state.login_redirect = True
-            st.experimental_rerun()  # <-- Safe rerun happens immediately
+            st.rerun()  # ✅ Fixed - simplified, removed redirect flag
         else:
             st.error("❌ Invalid credentials. Try again.")
-
-    # If redirected flag set, rerun and render MIS page
-    if st.session_state.get("login_redirect"):
-        st.session_state.login_redirect = False
-        st.experimental_rerun()
 
     st.stop()
 
@@ -240,4 +233,5 @@ if os.path.exists(EXCEL_PATH):
         st.warning(f"⚠️ Could not read summary: {e}")
 else:
     st.info("ℹ️ Add and save entries to view summary.")
+
 
