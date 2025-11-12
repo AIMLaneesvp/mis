@@ -6,40 +6,55 @@ from openpyxl import load_workbook
 # ===================================
 # ⚙️ Configuration
 # ===================================
-# 👉 Change this folder to your local directory
-DATA_FOLDER = r"C:\MIS_Files"  # For Windows
-# DATA_FOLDER = "/home/ubuntu/mis_files"  # For Linux servers
+# Local folder for saving Excel file
+DATA_FOLDER = r"C:\MIS_Files"  # 👉 Change this for your environment
+# DATA_FOLDER = "/home/ubuntu/mis_files"  # for Linux servers
 
 os.makedirs(DATA_FOLDER, exist_ok=True)
 EXCEL_PATH = os.path.join(DATA_FOLDER, "Book1.xlsx")
 
-# 👉 Set your app password here
+# Password for login
+APP_USERNAME = "admin"
 APP_PASSWORD = "admin123"
 
 # ===================================
-# 🔒 Authentication
+# 🔒 Authentication (Stable)
 # ===================================
-def check_password():
-    """Simple password gate"""
+def password_gate():
+    """Simple username + password gate for MIS app."""
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
+    if "username" not in st.session_state:
+        st.session_state.username = None
 
+    # If already authenticated, show logout
     if st.session_state.authenticated:
+        with st.sidebar:
+            st.success(f"👋 Logged in as {st.session_state.username}")
+            if st.button("Logout"):
+                st.session_state.authenticated = False
+                st.session_state.username = None
+                st.experimental_rerun()
         return True
 
+    # Login UI
     st.title("🔐 Secure MIS System Login")
-    password = st.text_input("Enter Password", type="password")
+    st.markdown("Please enter your credentials to access the MIS system.")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
     if st.button("Login"):
-        if password == APP_PASSWORD:
+        if username == APP_USERNAME and password == APP_PASSWORD:
             st.session_state.authenticated = True
-            st.success("✅ Access Granted")
-            st.experimental_rerun()
+            st.session_state.username = username
+            st.success("✅ Access Granted. Loading MIS System...")
+            st.stop()  # safe stop before rerun
         else:
-            st.error("❌ Incorrect Password")
+            st.error("❌ Invalid credentials. Try again.")
+    st.stop()
 
-    return False
-
-if not check_password():
+# Run authentication
+if not password_gate():
     st.stop()
 
 # ===================================
@@ -197,7 +212,7 @@ if save_clicked:
     st.session_state.purchase_entries = []
     st.session_state.sales_entries = []
     st.success(f"✅ Data saved successfully to `{EXCEL_PATH}`!")
-    st.experimental_rerun()  # Only rerun after saving
+    st.experimental_rerun()  # Only rerun after save
 
 # ==============================
 # 📊 SUMMARY
