@@ -292,7 +292,7 @@ with colA:
 with colB:
     st.metric("💰 Total Sales", f"BHD {summary['Total Sales (BHD)']:,.2f}")
 with colC:
-    profit_color = "normal" if summary['Gross Profit (INR)'] >= 0 else "inverse"
+    profit_color = "normal" if summary['Gross Profit (BHD)'] >= 0 else "inverse"
     st.metric("📊 Gross Profit", f"BHD {summary['Gross Profit (BHD)']:,.2f}")
 
 # ==============================
@@ -341,5 +341,6 @@ with st.expander("⚠️ Clear All Data (Danger Zone)", expanded=False):
 # ==============================
 st.markdown("---")
 st.caption("💡 **How to use:** Upload existing Excel → Add new entries → Save → Download → Next time upload the same file to continue!")
+
 
 
