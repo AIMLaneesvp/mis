@@ -17,14 +17,16 @@ APP_PASSWORD = "admin123"
 # ===================================
 # 🔒 Authentication (Stable Version)
 # ===================================
+
+# ===================================
+# 🔒 Authentication (Final Stable Version)
+# ===================================
 def password_gate():
-    """Username + password login, stable for reruns."""
+    """Simple and safe login system with auto-redirect after success."""
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
     if "username" not in st.session_state:
         st.session_state.username = None
-    if "login_attempt" not in st.session_state:
-        st.session_state.login_attempt = False
 
     # Already logged in
     if st.session_state.authenticated:
@@ -33,34 +35,33 @@ def password_gate():
             if st.button("Logout"):
                 st.session_state.authenticated = False
                 st.session_state.username = None
-                st.session_state.login_attempt = False
                 st.experimental_rerun()
         return True
 
-    # --- Login Form ---
+    # --- Login UI ---
     st.title("🔐 Secure MIS System Login")
     st.markdown("Please enter your credentials to access the MIS system.")
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    login_btn = st.button("Login")
 
-    # When user clicks Login
-    if login_btn:
-        st.session_state.login_attempt = True
+    if st.button("Login"):
         if username == APP_USERNAME and password == APP_PASSWORD:
             st.session_state.authenticated = True
             st.session_state.username = username
             st.success("✅ Access Granted! Redirecting...")
-            st.experimental_set_query_params(auth="true")
-            st.stop()  # stops this run safely; next rerun loads MIS
+            st.session_state.login_redirect = True
+            st.experimental_rerun()  # <-- Safe rerun happens immediately
         else:
             st.error("❌ Invalid credentials. Try again.")
-            st.session_state.authenticated = False
-            st.session_state.username = None
-            st.session_state.login_attempt = False
+
+    # If redirected flag set, rerun and render MIS page
+    if st.session_state.get("login_redirect"):
+        st.session_state.login_redirect = False
+        st.experimental_rerun()
 
     st.stop()
+
 
 # Run authentication
 if not password_gate():
@@ -239,3 +240,4 @@ if os.path.exists(EXCEL_PATH):
         st.warning(f"⚠️ Could not read summary: {e}")
 else:
     st.info("ℹ️ Add and save entries to view summary.")
+
