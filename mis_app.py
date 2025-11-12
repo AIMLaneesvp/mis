@@ -69,14 +69,14 @@ def calculate_summary(purchase_df, sales_df):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     
-    total_purchase = purchase_df["INR"].sum() if len(purchase_df) > 0 and "INR" in purchase_df.columns else 0
-    total_sales = sales_df["INR"].sum() if len(sales_df) > 0 and "INR" in sales_df.columns else 0
+    total_purchase = purchase_df["BHD"].sum() if len(purchase_df) > 0 and "BHD" in purchase_df.columns else 0
+    total_sales = sales_df["BHD"].sum() if len(sales_df) > 0 and "BHD" in sales_df.columns else 0
     gross_profit = total_sales - total_purchase
     
     return {
-        "Total Purchase (INR)": total_purchase,
-        "Total Sales (INR)": total_sales,
-        "Gross Profit (INR)": gross_profit,
+        "Total Purchase (BHD)": total_purchase,
+        "Total Sales (BHD)": total_sales,
+        "Gross Profit (BHD)": gross_profit,
     }
 
 def load_data_from_excel(uploaded_file):
@@ -288,12 +288,12 @@ summary = calculate_summary(st.session_state.purchase_data, st.session_state.sal
 
 colA, colB, colC = st.columns(3)
 with colA:
-    st.metric("💸 Total Purchase", f"₹{summary['Total Purchase (INR)']:,.2f}")
+    st.metric("💸 Total Purchase", f"BHD {summary['Total Purchase (INR)']:,.2f}")
 with colB:
-    st.metric("💰 Total Sales", f"₹{summary['Total Sales (INR)']:,.2f}")
+    st.metric("💰 Total Sales", f"BHD {summary['Total Sales (INR)']:,.2f}")
 with colC:
     profit_color = "normal" if summary['Gross Profit (INR)'] >= 0 else "inverse"
-    st.metric("📊 Gross Profit", f"₹{summary['Gross Profit (INR)']:,.2f}")
+    st.metric("📊 Gross Profit", f"BHD {summary['Gross Profit (INR)']:,.2f}")
 
 # ==============================
 # 📋 ALL DATA TABLES
@@ -341,3 +341,4 @@ with st.expander("⚠️ Clear All Data (Danger Zone)", expanded=False):
 # ==============================
 st.markdown("---")
 st.caption("💡 **How to use:** Upload existing Excel → Add new entries → Save → Download → Next time upload the same file to continue!")
+
