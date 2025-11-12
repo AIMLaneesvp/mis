@@ -4,6 +4,11 @@ import pandas as pd
 from openpyxl import load_workbook
 
 # ===================================
+# ⚙️ Page Config - MUST BE FIRST!
+# ===================================
+st.set_page_config(page_title="MIS System", layout="wide")
+
+# ===================================
 # ⚙️ Configuration
 # ===================================
 DATA_FOLDER = r"C:\MIS_Files"  # 👉 Change this to your desired local path
@@ -15,11 +20,7 @@ APP_USERNAME = "admin"
 APP_PASSWORD = "admin123"
 
 # ===================================
-# 🔒 Authentication (Stable Version)
-# ===================================
-
-# ===================================
-# 🔒 Authentication (Final Stable Version)
+# 🔒 Authentication
 # ===================================
 def password_gate():
     """Simple and safe login system with auto-redirect after success."""
@@ -35,7 +36,7 @@ def password_gate():
             if st.button("Logout"):
                 st.session_state.authenticated = False
                 st.session_state.username = None
-                st.rerun()  # ✅ Fixed
+                st.rerun()
         return True
 
     # --- Login UI ---
@@ -49,7 +50,7 @@ def password_gate():
         if username == APP_USERNAME and password == APP_PASSWORD:
             st.session_state.authenticated = True
             st.session_state.username = username
-            st.rerun()  # ✅ Fixed - simplified, removed redirect flag
+            st.rerun()
         else:
             st.error("❌ Invalid credentials. Try again.")
 
@@ -98,7 +99,6 @@ def calculate_summary(purchase_df, sales_df):
 # ===================================
 # 🧱 Main MIS Interface
 # ===================================
-st.set_page_config(page_title="MIS System", layout="wide")
 st.title("📊 MIS System - Purchase & Sales Entry")
 st.caption(f"📁 Data is stored locally at: `{EXCEL_PATH}`")
 
@@ -200,7 +200,7 @@ if st.session_state.sales_entries:
 st.markdown("---")
 st.subheader("💾 Save Data")
 
-if st.button("💾 Save All to Excel (No Rerun Until Click)"):
+if st.button("💾 Save All to Excel"):
     if st.session_state.purchase_entries:
         append_df_to_excel(EXCEL_PATH, pd.DataFrame(st.session_state.purchase_entries), "Purchase")
     if st.session_state.sales_entries:
@@ -226,12 +226,10 @@ if os.path.exists(EXCEL_PATH):
         st.markdown("---")
         st.write("### 📈 Summary Overview")
         colA, colB, colC = st.columns(3)
-        colA.metric("Total Purchase (INR)", f"{summary['Total Purchase (INR)']:.2f}")
-        colB.metric("Total Sales (INR)", f"{summary['Total Sales (INR)']:.2f}")
-        colC.metric("Gross Profit (INR)", f"{summary['Gross Profit (INR)']:.2f}")
+        colA.metric("Total Purchase (INR)", f"₹{summary['Total Purchase (INR)']:,.2f}")
+        colB.metric("Total Sales (INR)", f"₹{summary['Total Sales (INR)']:,.2f}")
+        colC.metric("Gross Profit (INR)", f"₹{summary['Gross Profit (INR)']:,.2f}")
     except Exception as e:
         st.warning(f"⚠️ Could not read summary: {e}")
 else:
     st.info("ℹ️ Add and save entries to view summary.")
-
-
