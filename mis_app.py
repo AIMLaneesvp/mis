@@ -1,163 +1,228 @@
+import os
 import streamlit as st
 import pandas as pd
 from openpyxl import load_workbook
-import os
-from datetime import date
 
-EXCEL_PATH = "Book1.xlsx"
-INR_MULTIPLIER = 1000
+# ===================================
+# ⚙️ Configuration
+# ===================================
+# 👉 Change this folder to your local directory
+DATA_FOLDER = r"C:\MIS_Files"  # For Windows
+# DATA_FOLDER = "/home/ubuntu/mis_files"  # For Linux servers
 
-# -------------------------
-# Helper to append to Excel
-# -------------------------
+os.makedirs(DATA_FOLDER, exist_ok=True)
+EXCEL_PATH = os.path.join(DATA_FOLDER, "Book1.xlsx")
+
+# 👉 Set your app password here
+APP_PASSWORD = "admin123"
+
+# ===================================
+# 🔒 Authentication
+# ===================================
+def check_password():
+    """Simple password gate"""
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if st.session_state.authenticated:
+        return True
+
+    st.title("🔐 Secure MIS System Login")
+    password = st.text_input("Enter Password", type="password")
+    if st.button("Login"):
+        if password == APP_PASSWORD:
+            st.session_state.authenticated = True
+            st.success("✅ Access Granted")
+            st.experimental_rerun()
+        else:
+            st.error("❌ Incorrect Password")
+
+    return False
+
+if not check_password():
+    st.stop()
+
+# ===================================
+# 🔧 Helper: Append to Excel
+# ===================================
 def append_df_to_excel(filename, df, sheet_name):
+    """Appends a DataFrame to an existing Excel sheet or creates a new one if missing."""
     if not os.path.exists(filename):
         with pd.ExcelWriter(filename, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name=sheet_name)
         return
 
     book = load_workbook(filename)
-    if sheet_name in book.sheetnames:
-        start_row = book[sheet_name].max_row
-        with pd.ExcelWriter(filename, engine="openpyxl", mode="a", if_sheet_exists="overlay") as writer:
-            df.to_excel(writer, index=False, header=False, sheet_name=sheet_name, startrow=start_row)
-    else:
+    if sheet_name not in book.sheetnames:
         with pd.ExcelWriter(filename, engine="openpyxl", mode="a") as writer:
             df.to_excel(writer, index=False, sheet_name=sheet_name)
+    else:
+        start_row = book[sheet_name].max_row
+        with pd.ExcelWriter(filename, engine="openpyxl", mode="a", if_sheet_exists="overlay") as writer:
+            df.to_excel(writer, index=False, sheet_name=sheet_name, startrow=start_row)
 
-# -------------------------
-# Summary calculator
-# -------------------------
-def calculate_summary(pur_df, sal_df):
-    for df in [pur_df, sal_df]:
+# ===================================
+# 💹 Safe Summary Function
+# ===================================
+def calculate_summary(purchase_df, sales_df):
+    """Convert columns safely to numeric and compute totals."""
+    for df in [purchase_df, sales_df]:
         for col in ["INR", "BHD", "Quantity", "Item Rate (BHD)"]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    total_purchase = pur_df["INR"].sum() if "INR" in pur_df.columns else 0
-    total_sales = sal_df["INR"].sum() if "INR" in sal_df.columns else 0
-    return {"Total Purchase (INR)": total_purchase, "Total Sales (INR)": total_sales, "Gross Profit (INR)": total_sales - total_purchase}
 
-# -------------------------
-# App setup
-# -------------------------
+    total_purchase = purchase_df["INR"].sum() if "INR" in purchase_df.columns else 0
+    total_sales = sales_df["INR"].sum() if "INR" in sales_df.columns else 0
+    gross_profit = total_sales - total_purchase
+
+    return {
+        "Total Purchase (INR)": total_purchase,
+        "Total Sales (INR)": total_sales,
+        "Gross Profit (INR)": gross_profit,
+    }
+
+# ===================================
+# 🧱 Streamlit App Layout
+# ===================================
 st.set_page_config(page_title="MIS System", layout="wide")
-st.title("📊 MIS System - Smooth Editing Mode")
+st.title("📊 MIS System - Purchase & Sales Entry")
+st.caption(f"📁 Data is stored locally at: `{EXCEL_PATH}`")
 
-# initialize default data
-if "purchase_df" not in st.session_state:
-    st.session_state.purchase_df = pd.DataFrame([{
-        "Date": date.today(),
-        "Vendor": "",
-        "Item Rate (BHD)": 0.0,
-        "Quantity": 0.0
-    }])
+# Initialize session states
+if "purchase_entries" not in st.session_state:
+    st.session_state.purchase_entries = []
+if "sales_entries" not in st.session_state:
+    st.session_state.sales_entries = []
 
-if "sales_df" not in st.session_state:
-    st.session_state.sales_df = pd.DataFrame([{
-        "Date": date.today(),
-        "Customer": "",
-        "Item Rate (BHD)": 0.0,
-        "Quantity": 0.0
-    }])
+# ==============================
+# 🛒 PURCHASE SECTION
+# ==============================
+st.subheader("🧾 Purchase Entry")
 
-# -------------------------
-# PURCHASE SECTION
-# -------------------------
-st.subheader("🧾 Purchase")
+with st.form("purchase_form"):
+    c1, c2, c3, c4, c5, c6 = st.columns([1.2, 1.5, 1, 1, 1, 1])
+    with c1:
+        p_date = st.date_input("Date", key="p_date")
+    with c2:
+        p_vendor = st.text_input("Vendor Name", key="p_vendor")
+    with c3:
+        p_item_rate = st.number_input("Item Rate (BHD)", min_value=0.0, format="%.3f", key="p_rate")
+    with c4:
+        p_quantity = st.number_input("Quantity", min_value=0.0, format="%.2f", key="p_qty")
+    with c5:
+        p_inr = p_quantity * 1000
+        st.number_input("INR Value (auto)", value=p_inr, disabled=True, format="%.2f")
+    with c6:
+        p_bhd = p_item_rate * p_quantity
+        st.number_input("BHD (auto)", value=p_bhd, disabled=True, format="%.3f")
 
-if st.button("➕ Add Purchase Row"):
-    new_row = {"Date": date.today(), "Vendor": "", "Item Rate (BHD)": 0.0, "Quantity": 0.0}
-    st.session_state.purchase_df = pd.concat([st.session_state.purchase_df, pd.DataFrame([new_row])], ignore_index=True)
+    submitted_purchase = st.form_submit_button("➕ Add Purchase Entry")
 
-purchase_temp = st.session_state.purchase_df.copy()
-purchase_temp["Date"] = pd.to_datetime(purchase_temp["Date"]).dt.date
+if submitted_purchase:
+    if p_vendor and p_item_rate > 0 and p_quantity > 0:
+        st.session_state.purchase_entries.append({
+            "Date": p_date,
+            "Vendor": p_vendor,
+            "Item Rate (BHD)": p_item_rate,
+            "Quantity": p_quantity,
+            "INR": p_inr,
+            "BHD": p_bhd
+        })
+        st.success("✅ Purchase entry added successfully!")
+    else:
+        st.warning("⚠️ Please fill all purchase fields correctly.")
 
-edited_purchase = st.data_editor(
-    purchase_temp,
-    num_rows="dynamic",
-    use_container_width=True,
-    key="purchase_editor",
-    column_config={
-        "Date": st.column_config.DateColumn("Date"),
-        "Vendor": st.column_config.TextColumn("Vendor"),
-        "Item Rate (BHD)": st.column_config.NumberColumn("Item Rate (BHD)", step=0.001),
-        "Quantity": st.column_config.NumberColumn("Quantity", step=0.01),
-    },
-    hide_index=True,
-)
+if st.session_state.purchase_entries:
+    df_pur = pd.DataFrame(st.session_state.purchase_entries)
+    st.dataframe(df_pur)
+    st.write(f"**Total INR:** ₹{df_pur['INR'].sum():,.2f} | **Total BHD:** {df_pur['BHD'].sum():,.3f}")
 
-# Apply button updates session state only once user finishes editing
-if st.button("✔️ Apply Purchase Changes"):
-    st.session_state.purchase_df = edited_purchase
-    st.success("✅ Purchase table updated successfully!")
+# ==============================
+# 💰 SALES SECTION
+# ==============================
+st.subheader("💰 Sales Entry")
 
-# -------------------------
-# SALES SECTION
-# -------------------------
-st.subheader("💰 Sales")
+with st.form("sales_form"):
+    s1, s2, s3, s4, s5, s6 = st.columns([1.2, 1.5, 1, 1, 1, 1])
+    with s1:
+        s_date = st.date_input("Date", key="s_date")
+    with s2:
+        s_customer = st.text_input("Customer Name", key="s_customer")
+    with s3:
+        s_item_rate = st.number_input("Item Rate (BHD)", min_value=0.0, format="%.3f", key="s_rate")
+    with s4:
+        s_quantity = st.number_input("Quantity", min_value=0.0, format="%.2f", key="s_qty")
+    with s5:
+        s_inr = s_quantity * 1000
+        st.number_input("INR Value (auto)", value=s_inr, disabled=True, format="%.2f")
+    with s6:
+        s_bhd = s_item_rate * s_quantity
+        st.number_input("BHD (auto)", value=s_bhd, disabled=True, format="%.3f")
 
-if st.button("➕ Add Sales Row"):
-    new_row = {"Date": date.today(), "Customer": "", "Item Rate (BHD)": 0.0, "Quantity": 0.0}
-    st.session_state.sales_df = pd.concat([st.session_state.sales_df, pd.DataFrame([new_row])], ignore_index=True)
+    submitted_sales = st.form_submit_button("➕ Add Sales Entry")
 
-sales_temp = st.session_state.sales_df.copy()
-sales_temp["Date"] = pd.to_datetime(sales_temp["Date"]).dt.date
+if submitted_sales:
+    if s_customer and s_item_rate > 0 and s_quantity > 0:
+        st.session_state.sales_entries.append({
+            "Date": s_date,
+            "Customer": s_customer,
+            "Item Rate (BHD)": s_item_rate,
+            "Quantity": s_quantity,
+            "INR": s_inr,
+            "BHD": s_bhd
+        })
+        st.success("✅ Sales entry added successfully!")
+    else:
+        st.warning("⚠️ Please fill all sales fields correctly.")
 
-edited_sales = st.data_editor(
-    sales_temp,
-    num_rows="dynamic",
-    use_container_width=True,
-    key="sales_editor",
-    column_config={
-        "Date": st.column_config.DateColumn("Date"),
-        "Customer": st.column_config.TextColumn("Customer"),
-        "Item Rate (BHD)": st.column_config.NumberColumn("Item Rate (BHD)", step=0.001),
-        "Quantity": st.column_config.NumberColumn("Quantity", step=0.01),
-    },
-    hide_index=True,
-)
+if st.session_state.sales_entries:
+    df_sales = pd.DataFrame(st.session_state.sales_entries)
+    st.dataframe(df_sales)
+    st.write(f"**Total INR:** ₹{df_sales['INR'].sum():,.2f} | **Total BHD:** {df_sales['BHD'].sum():,.3f}")
 
-if st.button("✔️ Apply Sales Changes"):
-    st.session_state.sales_df = edited_sales
-    st.success("✅ Sales table updated successfully!")
-
-# -------------------------
-# 💾 Save All
-# -------------------------
+# ==============================
+# 💾 SAVE TO EXCEL
+# ==============================
 st.markdown("---")
-if st.button("💾 Save All to Excel"):
-    pur = st.session_state.purchase_df.copy()
-    sal = st.session_state.sales_df.copy()
+st.subheader("💾 Save Data")
 
-    # calculate INR/BHD before saving
-    pur["INR"] = pd.to_numeric(pur["Quantity"], errors="coerce").fillna(0) * INR_MULTIPLIER
-    pur["BHD"] = pur["Quantity"] * pur["Item Rate (BHD)"]
-    sal["INR"] = pd.to_numeric(sal["Quantity"], errors="coerce").fillna(0) * INR_MULTIPLIER
-    sal["BHD"] = sal["Quantity"] * sal["Item Rate (BHD)"]
+save_clicked = st.button("💾 Save All to Excel (No Rerun Until Click)")
 
-    pur = pur[~pur["Vendor"].astype(str).str.strip().eq("")]
-    sal = sal[~sal["Customer"].astype(str).str.strip().eq("")]
+if save_clicked:
+    if st.session_state.purchase_entries:
+        append_df_to_excel(EXCEL_PATH, pd.DataFrame(st.session_state.purchase_entries), "Purchase")
+    if st.session_state.sales_entries:
+        append_df_to_excel(EXCEL_PATH, pd.DataFrame(st.session_state.sales_entries), "Sales")
 
-    if not pur.empty:
-        append_df_to_excel(EXCEL_PATH, pur, "Purchase")
-    if not sal.empty:
-        append_df_to_excel(EXCEL_PATH, sal, "Sales")
+    st.session_state.purchase_entries = []
+    st.session_state.sales_entries = []
+    st.success(f"✅ Data saved successfully to `{EXCEL_PATH}`!")
+    st.experimental_rerun()  # Only rerun after saving
 
-    st.success("✅ All data saved to Excel successfully!")
-
-# -------------------------
-# 📊 Summary
-# -------------------------
+# ==============================
+# 📊 SUMMARY
+# ==============================
 if os.path.exists(EXCEL_PATH):
-    xls = pd.ExcelFile(EXCEL_PATH)
-    pur = pd.read_excel(xls, "Purchase") if "Purchase" in xls.sheet_names else pd.DataFrame()
-    sal = pd.read_excel(xls, "Sales") if "Sales" in xls.sheet_names else pd.DataFrame()
-    summary = calculate_summary(pur, sal)
-    st.markdown("---")
-    st.write("### Summary")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total Purchase (INR)", f"{summary['Total Purchase (INR)']:.2f}")
-    c2.metric("Total Sales (INR)", f"{summary['Total Sales (INR)']:.2f}")
-    c3.metric("Gross Profit (INR)", f"{summary['Gross Profit (INR)']:.2f}")
+    try:
+        xls = pd.ExcelFile(EXCEL_PATH)
+        pur = pd.read_excel(xls, "Purchase") if "Purchase" in xls.sheet_names else pd.DataFrame()
+        sal = pd.read_excel(xls, "Sales") if "Sales" in xls.sheet_names else pd.DataFrame()
+
+        # Convert all numeric columns safely
+        for df in [pur, sal]:
+            for col in ["INR", "BHD", "Quantity", "Item Rate (BHD)"]:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+        summary = calculate_summary(pur, sal)
+
+        st.markdown("---")
+        st.write("### 📈 Summary Overview")
+        colA, colB, colC = st.columns(3)
+        colA.metric("Total Purchase (INR)", f"{summary['Total Purchase (INR)']:.2f}")
+        colB.metric("Total Sales (INR)", f"{summary['Total Sales (INR)']:.2f}")
+        colC.metric("Gross Profit (INR)", f"{summary['Gross Profit (INR)']:.2f}")
+    except Exception as e:
+        st.warning(f"⚠️ Could not read summary: {e}")
 else:
-    st.info("No Excel data yet.")
+    st.info("ℹ️ Add and save entries to view summary.")
