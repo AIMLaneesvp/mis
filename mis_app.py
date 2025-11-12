@@ -6,28 +6,25 @@ from openpyxl import load_workbook
 # ===================================
 # ⚙️ Configuration
 # ===================================
-# Local folder for saving Excel file
-DATA_FOLDER = r"C:\MIS_Files"  # 👉 Change this for your environment
+DATA_FOLDER = r"C:\MIS_Files"  # 👉 Change this to your desired folder
 # DATA_FOLDER = "/home/ubuntu/mis_files"  # for Linux servers
-
 os.makedirs(DATA_FOLDER, exist_ok=True)
 EXCEL_PATH = os.path.join(DATA_FOLDER, "Book1.xlsx")
 
-# Password for login
 APP_USERNAME = "admin"
 APP_PASSWORD = "admin123"
 
 # ===================================
-# 🔒 Authentication (Stable)
+# 🔒 Authentication (Stable Auto-Redirect)
 # ===================================
 def password_gate():
-    """Simple username + password gate for MIS app."""
+    """Secure login system with username + password and safe rerun after login."""
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
     if "username" not in st.session_state:
         st.session_state.username = None
 
-    # If already authenticated, show logout
+    # If already logged in — show logout
     if st.session_state.authenticated:
         with st.sidebar:
             st.success(f"👋 Logged in as {st.session_state.username}")
@@ -37,20 +34,23 @@ def password_gate():
                 st.experimental_rerun()
         return True
 
-    # Login UI
+    # --- Login UI ---
     st.title("🔐 Secure MIS System Login")
     st.markdown("Please enter your credentials to access the MIS system.")
+
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
+    login_btn = st.button("Login")
 
-    if st.button("Login"):
+    if login_btn:
         if username == APP_USERNAME and password == APP_PASSWORD:
             st.session_state.authenticated = True
             st.session_state.username = username
-            st.success("✅ Access Granted. Loading MIS System...")
-            st.stop()  # safe stop before rerun
+            st.success("✅ Access Granted! Redirecting...")
+            st.experimental_rerun()   # immediately load MIS system
         else:
             st.error("❌ Invalid credentials. Try again.")
+
     st.stop()
 
 # Run authentication
@@ -58,15 +58,14 @@ if not password_gate():
     st.stop()
 
 # ===================================
-# 🔧 Helper: Append to Excel
+# 🔧 Helper: Append Data to Excel
 # ===================================
 def append_df_to_excel(filename, df, sheet_name):
-    """Appends a DataFrame to an existing Excel sheet or creates a new one if missing."""
+    """Append a DataFrame to an existing Excel sheet or create new one."""
     if not os.path.exists(filename):
         with pd.ExcelWriter(filename, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name=sheet_name)
         return
-
     book = load_workbook(filename)
     if sheet_name not in book.sheetnames:
         with pd.ExcelWriter(filename, engine="openpyxl", mode="a") as writer:
@@ -77,10 +76,10 @@ def append_df_to_excel(filename, df, sheet_name):
             df.to_excel(writer, index=False, sheet_name=sheet_name, startrow=start_row)
 
 # ===================================
-# 💹 Safe Summary Function
+# 💹 Summary Function
 # ===================================
 def calculate_summary(purchase_df, sales_df):
-    """Convert columns safely to numeric and compute totals."""
+    """Convert numeric columns safely and compute totals."""
     for df in [purchase_df, sales_df]:
         for col in ["INR", "BHD", "Quantity", "Item Rate (BHD)"]:
             if col in df.columns:
@@ -89,7 +88,6 @@ def calculate_summary(purchase_df, sales_df):
     total_purchase = purchase_df["INR"].sum() if "INR" in purchase_df.columns else 0
     total_sales = sales_df["INR"].sum() if "INR" in sales_df.columns else 0
     gross_profit = total_sales - total_purchase
-
     return {
         "Total Purchase (INR)": total_purchase,
         "Total Sales (INR)": total_sales,
@@ -103,7 +101,7 @@ st.set_page_config(page_title="MIS System", layout="wide")
 st.title("📊 MIS System - Purchase & Sales Entry")
 st.caption(f"📁 Data is stored locally at: `{EXCEL_PATH}`")
 
-# Initialize session states
+# Initialize session state lists
 if "purchase_entries" not in st.session_state:
     st.session_state.purchase_entries = []
 if "sales_entries" not in st.session_state:
@@ -212,7 +210,7 @@ if save_clicked:
     st.session_state.purchase_entries = []
     st.session_state.sales_entries = []
     st.success(f"✅ Data saved successfully to `{EXCEL_PATH}`!")
-    st.experimental_rerun()  # Only rerun after save
+    st.experimental_rerun()  # refresh after save
 
 # ==============================
 # 📊 SUMMARY
@@ -223,7 +221,6 @@ if os.path.exists(EXCEL_PATH):
         pur = pd.read_excel(xls, "Purchase") if "Purchase" in xls.sheet_names else pd.DataFrame()
         sal = pd.read_excel(xls, "Sales") if "Sales" in xls.sheet_names else pd.DataFrame()
 
-        # Convert all numeric columns safely
         for df in [pur, sal]:
             for col in ["INR", "BHD", "Quantity", "Item Rate (BHD)"]:
                 if col in df.columns:
