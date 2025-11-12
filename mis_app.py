@@ -288,12 +288,12 @@ summary = calculate_summary(st.session_state.purchase_data, st.session_state.sal
 
 colA, colB, colC = st.columns(3)
 with colA:
-    st.metric("💸 Total Purchase", f"BHD {summary['Total Purchase (INR)']:,.2f}")
+    st.metric("💸 Total Purchase", f"BHD {summary['Total Purchase (BHD)']:,.2f}")
 with colB:
-    st.metric("💰 Total Sales", f"BHD {summary['Total Sales (INR)']:,.2f}")
+    st.metric("💰 Total Sales", f"BHD {summary['Total Sales (BHD)']:,.2f}")
 with colC:
     profit_color = "normal" if summary['Gross Profit (INR)'] >= 0 else "inverse"
-    st.metric("📊 Gross Profit", f"BHD {summary['Gross Profit (INR)']:,.2f}")
+    st.metric("📊 Gross Profit", f"BHD {summary['Gross Profit (BHD)']:,.2f}")
 
 # ==============================
 # 📋 ALL DATA TABLES
@@ -341,4 +341,5 @@ with st.expander("⚠️ Clear All Data (Danger Zone)", expanded=False):
 # ==============================
 st.markdown("---")
 st.caption("💡 **How to use:** Upload existing Excel → Add new entries → Save → Download → Next time upload the same file to continue!")
+
 
